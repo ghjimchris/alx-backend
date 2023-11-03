@@ -1,45 +1,45 @@
 #!/usr/bin/env python3
-
 """
-This module provides a flask app instance
+A Basic flask application
 """
-
-from flask import (
-    Flask,
-    render_template,
-    request
-)
+from flask import Flask
+from flask import request
+from flask import render_template
 from flask_babel import Babel
-
-app = Flask(__name__)
-babel = Babel(app)
 
 
 class Config(object):
-    """ A Config class for configuration """
+    """
+    Application configuration class
+    """
     LANGUAGES = ['en', 'fr']
-    BABEL_DEFAULT_LOCALE = "en"
-    BABEL_DEFAULT_TIMEZONE = "UTC"
+    BABEL_DEFAULT_LOCALE = 'en'
+    BABEL_DEFAULT_TIMEZONE = 'UTC'
 
 
+# Instantiate the application object
+app = Flask(__name__)
 app.config.from_object(Config)
 
-
-@app.route('/', strict_slashes=False)
-def indexHtml() -> str:
-    """ Creates html template """
-    page_title = 'Welcome to Holberton'
-    content = 'Hello world'
-    return render_template('2-index.html',
-                           page_title=page_title,
-                           content=content)
+# Wrap the application with Babel
+babel = Babel(app)
 
 
-@babel.localselector
+@babel.localeselector
 def get_locale() -> str:
-    """ Gets the language to be used """
+    """
+    Gets locale from request object
+    """
     return request.accept_languages.best_match(app.config['LANGUAGES'])
 
 
+@app.route('/', strict_slashes=False)
+def index() -> str:
+    """
+    Renders a basic html template
+    """
+    return render_template('2-index.html')
+
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run()

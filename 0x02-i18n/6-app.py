@@ -1,28 +1,34 @@
 #!/usr/bin/env python3
-
 """
-This module provides a flask app instance
+A Basic flask application
 """
-
-from flask import (
-    Flask,
-    g,
-    render_template,
-    request
+from typing import (
+    Dict, Union
 )
-from flask_babel import Babel, gettext
+
+from flask import Flask
+from flask import g, request
+from flask import render_template
+from flask_babel import Babel
 
 
-class Config:
-    """ A Config class for configuration """
+class Config(object):
+    """
+    Application configuration class
+    """
     LANGUAGES = ['en', 'fr']
-    BABEL_DEFAULT_LOCALE = "en"
-    BABEL_DEFAULT_TIMEZONE = "UTC"
+    BABEL_DEFAULT_LOCALE = 'en'
+    BABEL_DEFAULT_TIMEZONE = 'UTC'
 
 
+# Instantiate the application object
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Wrap the application with Babel
 babel = Babel(app)
+
+
 users = {
     1: {"name": "Balou", "locale": "fr", "timezone": "Europe/Paris"},
     2: {"name": "Beyonce", "locale": "en", "timezone": "US/Central"},
@@ -31,53 +37,48 @@ users = {
 }
 
 
+def get_user(id) -> Union[Dict[str, Union[str, None]], None]:
+    """
+    Validate user login details
+    Args:
+        id (str): user id
+    Returns:
+        (Dict): user dictionary if id is valid else None
+    """
+    return users.get(int(id), {})
+
+
 @babel.localeselector
 def get_locale() -> str:
-    """ Gets the language to be used """
-    locale = request.args.get('locale')
-    if locale in app.config['LANGUAGES']:
-        return locale
-    user = g.user
-    if user is not None:
-        locale = user.get('locale')
-        if locale is not None:
-            if locale in app.config['LANGUAGES']:
-                return locale
-    return request.accept_languages.best_match(app.config['LANGUAGES'])
-
-
-def get_user() -> str:
-    """ Gets the user to be logged in as """
-    user = request.args.get('login_as')
-    try:
-        user = int(user)
-    except Exception:
-        pass
-    if user is not None:
-        return users.get(user, None)
-    return None
+    """
+    Gets locale from request object
+    """
+    options = [
+        request.args.get('locale', '').strip(),
+        g.user.get('locale', None) if g.user else None,
+        request.accept_languages.best_match(app.config['LANGUAGES']),
+        Config.BABEL_DEFAULT_LOCALE
+    ]
+    for locale in options:
+        if locale and locale in Config.LANGUAGES:
+            return locale
 
 
 @app.before_request
 def before_request() -> None:
-    """ Sets the global user as the logged in user """
-    user = get_user()
-    g.user = user
+    """
+    Adds valid user to the global session object `g`
+    """
+    setattr(g, 'user', get_user(request.args.get('login_as', 0)))
 
 
 @app.route('/', strict_slashes=False)
-def indexHtml() -> str:
-    """ Creates html template """
-    user = g.user
-    login_status = 'not_logged_in'
-    username = ''
-    if user is not None:
-        login_status = 'logged_in_as'
-        username = user.get('name')
-    return render_template('6-index.html',
-                           login_status=login_status,
-                           username=username)
+def index() -> str:
+    """
+    Renders a basic html template
+    """
+    return render_template('6-index.html')
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run()
